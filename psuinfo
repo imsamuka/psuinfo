@@ -30,7 +30,7 @@ def main():
     home = os.getenv("HOME")
     draw_icons = False
 
-    disks_usage = which = xfer_start = xfer_end = path_to_icon = c_name = None
+    which = xfer_start = xfer_end = path_to_icon = c_name = None
 
     for arg in sys.argv[1:]:
         if arg in ("-h", "--help"):
@@ -94,59 +94,6 @@ def main():
         except:
             pass
 
-    drives = []
-    # Find drive names, mountpoints
-    if "d" or "D" or "n" or "N" in components:
-        try:
-            d = psutil.disk_partitions()
-            # This will store name, mountpoint
-            for entry in d:
-                n = entry[0].split("/")
-                name = n[len(n) - 1]
-                # name, mountpoint
-                drive = name, entry[1]
-                drives.append(drive)
-        except:
-            pass
-
-    if "d" in components or "D" in components:
-        try:
-            disks_usage = []
-            for drive in drives:
-                # Search drives by path
-                data = psutil.disk_usage(drive[1])
-                # Store name, used, total, percent
-                essential = drive[0].upper(), data[1], data[0], data[3]
-                disks_usage.append(essential)
-        except:
-            pass
-
-    if "n" in components or "N" in components:
-        try:
-            disks_usage = []
-            for drive in drives:
-                # Search drives by path
-                data = psutil.disk_usage(drive[1])
-                # Store mountpoint, used, total, percent
-                essential = drive[1], data[1], data[0], data[3]
-                disks_usage.append(essential)
-        except:
-            pass
-
-    @lru_cache
-    def temp():
-        return psutil.sensors_temperatures(fahrenheit)
-
-    @lru_cache
-    def disks_entries():
-        if disks_usage:
-            if which is not None:
-                entry = disks_usage.get(which)
-                return (entry,) if entry else tuple()
-            return tuple(disks_usage)
-        return tuple()
-
-
     def nameAs(default):
         return c_name or default if names else ""
 
@@ -164,7 +111,7 @@ def main():
 
         elif char == "a":
             if avg():
-                output.append(nameAs("avCPU: ") + avg() + "%")
+                output.append(nameAs("avCPU: ") + str(avg()).ljust(4) + "%")
 
         elif char == "q":
             if freqs():
@@ -198,36 +145,38 @@ def main():
                 )
 
         elif char == "t":
-            if not temp():
+            temp = psutil.sensors_temperatures(fahrenheit)
+
+            if not temp:
                 continue
 
-            if "k10temp" in temp().keys():
+            if "k10temp" in temp.keys():
                 # ryzen, multiple Die temperatures for threadripper/Epyc
                 try:
                     ryzen_die_temps = tuple(
                         sensor.current
-                        for sensor in temp()["k10temp"]
+                        for sensor in temp["k10temp"]
                         if sensor.label == 'Tdie' or sensor.label == 'Tctl'
                     )
                     if ryzen_die_temps:
                         temper = str(int(max(ryzen_die_temps)))
                 except Exception:
                     pass
-            elif "zenpower" in temp().keys():
+            elif "zenpower" in temp.keys():
                 # zen3 is not supported in k10. Fix is to load zenpower and unload k10
                 try:
                     ryzen_die_temps = tuple(
                         sensor.current
-                        for sensor in temp()["zenpower"]
+                        for sensor in temp["zenpower"]
                         if sensor.label == 'Tdie' or sensor.label == 'Tctl'
                     )
                     if ryzen_die_temps:
                         temper = str(int(max(ryzen_die_temps)))
                 except Exception:
                     pass
-            elif "coretemp" in temp().keys():
+            elif "coretemp" in temp.keys():
                 # intel
-                temper = str(int(temp()["coretemp"][0][1]))
+                temper = str(int(temp["coretemp"][0][1]))
             else:
                 temper = ""
 
@@ -297,15 +246,17 @@ def main():
                 output.append(nameAs("SWAP: ") + str(swap()[3]) + "%")
 
         elif char == "d" or char == "n":
-            for entry in disks_entries():
-                output.append(entry[0] + ": " + str(entry[3]) + "%")
+            i = 0 if char == "d" else 1
+            for *names, usage in disk_usage_data(which):
+                output.append(names[i] + ": " + str(usage.percent) + "%")
 
         elif char == "D" or char == "N":
-            for entry in disks_entries():
+            i = 0 if char == "d" else 1
+            for *names, usage in disk_usage_data(which):
                 output.append(
-                    entry[0] + ": " +
-                    str(round(entry[1] / 1073741824, 1)) + "/" +
-                    str(round(entry[2] / 1073741824, 1)) + " GB"
+                    names[i] + ": " +
+                    str(round(usage.used / 1073741824, 1)) + "/" +
+                    str(round(usage.total / 1073741824, 1)) + " GB"
                 )
 
         elif char == "k":
@@ -330,10 +281,7 @@ def pcpu():
 
 @lru_cache
 def avg():
-    _avg = str(psutil.cpu_percent(interval=1))
-    if len(_avg) < 4:
-        _avg = " " + _avg
-    return _avg
+    return psutil.cpu_percent(interval=1)
 
 @lru_cache
 def speed():
@@ -358,6 +306,17 @@ def swap():
 @lru_cache
 def b_time():
     return psutil.boot_time()
+
+@lru_cache
+def disk_usage_data(which: int):
+    tpl = tuple(
+        (
+         partition.device.split("/")[-1].upper(),
+         partition.mountpoint,
+         psutil.disk_usage(partition.mountpoint)
+        ) for partition in psutil.disk_partitions()
+    )
+    return tpl[which:which+1] if which is not None else tpl
 
 def per_cpu(result):
     string = ""
