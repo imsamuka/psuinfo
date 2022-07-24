@@ -81,10 +81,6 @@ def main():
     if testing:
         time_start = int(round(time.time() * 1000))
 
-    @lru_cache
-    def temp():
-        return psutil.sensors_temperatures(fahrenheit)
-
     if "k" in components:
         try:
             xfer_start = psutil.net_io_counters()
@@ -136,6 +132,20 @@ def main():
                 disks_usage.append(essential)
         except:
             pass
+
+    @lru_cache
+    def temp():
+        return psutil.sensors_temperatures(fahrenheit)
+
+    @lru_cache
+    def disks_entries():
+        if disks_usage:
+            if which is not None:
+                entry = disks_usage.get(which)
+                return (entry,) if entry else tuple()
+            return tuple(disks_usage)
+        return tuple()
+
 
     def nameAs(default):
         return c_name or default if names else ""
@@ -194,20 +204,32 @@ def main():
             if "k10temp" in temp().keys():
                 # ryzen, multiple Die temperatures for threadripper/Epyc
                 try:
-                    ryzen_die_temps = [sensor.current for sensor in temp()["k10temp"] if sensor.label == 'Tdie' or sensor.label == 'Tctl']
-                    temper = str(int(max(ryzen_die_temps)))
-                except:
+                    ryzen_die_temps = tuple(
+                        sensor.current
+                        for sensor in temp()["k10temp"]
+                        if sensor.label == 'Tdie' or sensor.label == 'Tctl'
+                    )
+                    if ryzen_die_temps:
+                        temper = str(int(max(ryzen_die_temps)))
+                except Exception:
                     pass
             elif "zenpower" in temp().keys():
                 # zen3 is not supported in k10. Fix is to load zenpower and unload k10
                 try:
-                    ryzen_die_temps = [sensor.current for sensor in temp()["zenpower"] if sensor.label == 'Tdie' or sensor.label == 'Tctl']
-                    temper = str(int(max(ryzen_die_temps)))
-                except:
+                    ryzen_die_temps = tuple(
+                        sensor.current
+                        for sensor in temp()["zenpower"]
+                        if sensor.label == 'Tdie' or sensor.label == 'Tctl'
+                    )
+                    if ryzen_die_temps:
+                        temper = str(int(max(ryzen_die_temps)))
+                except Exception:
                     pass
             elif "coretemp" in temp().keys():
                 # intel
                 temper = str(int(temp()["coretemp"][0][1]))
+            else:
+                temper = ""
 
             if temper:
                 name = nameAs("CORE: ")
@@ -275,32 +297,16 @@ def main():
                 output.append(nameAs("SWAP: ") + str(swap()[3]) + "%")
 
         elif char == "d" or char == "n":
-            if disks_usage:
-                if which is not None:
-                    entry = disks_usage.get(which)
-                    if entry:
-                        output.append(entry[0] + ": " + str(entry[3]) + "%")
-                else:
-                    for entry in disks_usage:
-                        output.append(entry[0] + ": " + str(entry[3]) + "%")
+            for entry in disks_entries():
+                output.append(entry[0] + ": " + str(entry[3]) + "%")
 
         elif char == "D" or char == "N":
-            if disks_usage:
-                if which is not None:
-                    entry = disks_usage.get(which)
-                    if entry:
-                        output.append(
-                            entry[0] + ": " +
-                            str(round(entry[1] / 1073741824, 1)) + "/" +
-                            str(round(entry[2] / 1073741824, 1)) + " GB"
-                        )
-                else:
-                    for entry in disks_usage:
-                        output.append(
-                            entry[0] + ": " +
-                            str(round(entry[1] / 1073741824, 1)) + "/" +
-                            str(round(entry[2] / 1073741824, 1)) + " GB"
-                        )
+            for entry in disks_entries():
+                output.append(
+                    entry[0] + ": " +
+                    str(round(entry[1] / 1073741824, 1)) + "/" +
+                    str(round(entry[2] / 1073741824, 1)) + " GB"
+                )
 
         elif char == "k":
             if xfer_start and xfer_end:
