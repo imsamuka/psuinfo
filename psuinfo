@@ -33,56 +33,51 @@ def main():
         path_to_icon, c_name= None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
         None, None, None
 
-    for i in range(1, len(sys.argv)):
-        if sys.argv[i] == "-h" or sys.argv[i] == "--help":
+    for arg in sys.argv[1:]:
+        if arg in ("-h", "--help"):
             print_help()
             exit(0)
 
-        if sys.argv[i] == "-F":
+        elif arg == "-F":
             fahrenheit = True
 
-        if sys.argv[i] == "-N":
+        elif arg == "-N":
             names = True
 
-        if sys.argv[i] == "-T":
+        elif arg == "-T":
             testing = True
 
-        if sys.argv[i].startswith("-C"):
-            components = sys.argv[i][2::]
+        elif arg.startswith("-C"):
+            components = arg[2:]
 
-        if sys.argv[i].startswith("-S"):
-            try:
-                # if number given
-                spacing = int(sys.argv[i][2::])
-                separator = " " * spacing
-            except ValueError:
-                # string given
-                separator = sys.argv[i][2::]
+        elif arg.startswith("-S"):
+            if arg[2:].isdigit():
+                separator = " " * int(arg[2:])
+            else:
+                separator = arg[2:]
 
-        if sys.argv[i].startswith("-W"):
-            try:
-                which = int(sys.argv[i][2::])
-            except ValueError:
-                pass
+        elif arg.startswith("-W"):
+            if arg[2:].isdigit():
+                which = int(arg[2:])
 
-        if sys.argv[i].upper() == "-ALL":
-            components = "gpaQStfMcWDUk"
-            names = True
-            testing = True
-
-        if sys.argv[i].startswith("-I"):
+        elif arg.startswith("-I"):
             draw_icons = True
             # We can only have one icon per executor, so let's strip components to the first one
-            components = sys.argv[i][2]
+            components = arg[2]
             # exception for UL/DL speed; to assign an icon to it we need to calculate speeds first
             if components != "k":
                 path_to_icon = icon_path(home, components)
 
-        if sys.argv[i].startswith("-M"):
+        elif arg.startswith("-M"):
             # We can only have a custom name for a single component
             components = components[0]
             names = True
-            c_name = sys.argv[i][2::]
+            c_name = arg[2:]
+
+        elif arg.upper() == "-ALL":
+            components = "gpaQStfMcWDUk"
+            names = True
+            testing = True
 
     if testing:
         time_start = int(round(time.time() * 1000))
