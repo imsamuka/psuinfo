@@ -14,9 +14,10 @@ Inspired by https://github.com/tknomanzr/scripts/blob/master/tint2/executors/cpu
 """
 
 import sys
-import psutil
 import time
 import os
+from functools import lru_cache
+import psutil
 
 
 def main():
@@ -29,9 +30,7 @@ def main():
     home = os.getenv("HOME")
     draw_icons = False
 
-    pcpu, avg, speed, freqs, temp, fans, b_time, memory, swap, disks_usage, which, ul, dl, xfer_start, xfer_finish, \
-        path_to_icon, c_name= None, None, None, None, None, None, None, None, None, None, None, None, None, None, \
-        None, None, None
+    disks_usage = which = xfer_start = xfer_finish = path_to_icon = c_name = None
 
     for arg in sys.argv[1:]:
         if arg in ("-h", "--help"):
@@ -84,58 +83,9 @@ def main():
 
     output = ""
 
-    # Prepare ONLY requested data, ONLY once
-    if "g" or "p" in components:
-        try:
-            pcpu = psutil.cpu_percent(interval=1, percpu=True)
-        except:
-            pass
-
-    if "a" in components:
-        try:
-            avg = str(psutil.cpu_percent(interval=1))
-            if len(avg) < 4:
-                avg = " " + avg
-        except:
-            pass
-
-    if "s" or "S" in components:
-        try:
-            speed = psutil.cpu_freq(False)
-        except:
-            pass
-
-    if "q" or "Q" in components:
-        try:
-            freqs = psutil.cpu_freq(True)
-            if len(freqs) == 0:
-                freqs = None
-        except:
-            pass
-
-    if "t" in components:
-        try:
-            temp = psutil.sensors_temperatures(fahrenheit)
-        except:
-            pass
-
-    if "f" in components:
-        try:
-            fans = psutil.sensors_fans()
-        except:
-            pass
-
-    if "m" or "M" or "z" or "Z" in components:
-        try:
-            memory = psutil.virtual_memory()
-        except:
-            pass
-
-    if "w" or "W" or "x" in components:
-        try:
-            swap = psutil.swap_memory()
-        except:
-            pass
+    @lru_cache
+    def temp():
+        return psutil.sensors_temperatures(fahrenheit)
 
     if "k" in components:
         try:
@@ -165,7 +115,7 @@ def main():
         except:
             pass
 
-    if "d" or "D" in components:
+    if "d" in components or "D" in components:
         try:
             disks_usage = []
             for drive in drives:
@@ -189,137 +139,132 @@ def main():
         except:
             pass
 
-    if "u" or "U" in components:
-        try:
-            b_time = psutil.boot_time()
-        except:
-            pass
 
     # Build output component after component
     output += separator
 
     for char in components:
-        if char == "g" and pcpu is not None:
+        if char == "g" and pcpu():
             if c_name:
                 output += c_name
-            output += graph_per_cpu(pcpu) + separator
+            output += graph_per_cpu(pcpu()) + separator
 
-        if char == "p" and pcpu is not None:
+        if char == "p" and pcpu():
             if names:
                 output += c_name if c_name else "CPU: "
-            output += per_cpu(pcpu) + separator
+            output += per_cpu(pcpu()) + separator
 
-        if char == "a" and avg is not None:
+        if char == "a" and avg():
             if names:
                 output += c_name if c_name else "avCPU: "
-            output += avg + "%" + separator
+            output += avg() + "%" + separator
 
-        if char == "q" and freqs is not None:
+        if char == "q" and freqs():
             if names:
                 output += c_name if c_name else "CPU: "
-            output += freq_per_cpu(freqs)[0][:-1] + " GHz" + separator
+            output += freq_per_cpu(freqs())[0][:-1] + " GHz" + separator
 
-        if char == "Q" and freqs is not None:
+        if char == "Q" and freqs():
             if names:
                 output += c_name if c_name else "CPU: "
-            result = freq_per_cpu(freqs)
+            result = freq_per_cpu(freqs())
             output += result[0][:-1] + "/" + str(result[1]) + " GHz" + separator
 
-        if char == "s" and speed is not None:
+        if char == "s" and speed():
             if names:
                 output += c_name if c_name else "SPD: "
-            output += str(round(speed[0] / 1000, 1)) + " GHz" + separator
+            output += str(round(speed()[0] / 1000, 1)) + " GHz" + separator
 
-        if char == "S" and speed is not None:
+        if char == "S" and speed():
             if names:
                 output += c_name if c_name else "avSPD: "
-            output += str(round(speed[0] / 1000, 1)) + "/" + str(round(speed[2] / 1000, 1)) + " GHz" + separator
+            output += str(round(speed()[0] / 1000, 1)) + "/" + str(round(speed()[2] / 1000, 1)) + " GHz" + separator
 
-        if char == "t" and temp is not None and len(temp) > 0:
+        if char == "t" and temp() and len(temp()) > 0:
             if names:
                 output += c_name if c_name else "CORE: "
-            if "k10temp" in temp.keys():
+            if "k10temp" in temp().keys():
                 # ryzen, multiple Die temperatures for threadripper/Epyc
                 try:
-                    ryzen_die_temps = [sensor.current for sensor in temp["k10temp"] if sensor.label == 'Tdie'
+                    ryzen_die_temps = [sensor.current for sensor in temp()["k10temp"] if sensor.label == 'Tdie'
                                        or sensor.label == 'Tctl']
                     output += str(int(max(ryzen_die_temps)))
                 except:
                     pass
-            if "zenpower" in temp.keys():
+            if "zenpower" in temp().keys():
                 # zen3 is not supported in k10.  Fix is to load zenpower and unload k10
                 try:
-                    ryzen_die_temps = [sensor.current for sensor in temp["zenpower"] if sensor.label == 'Tdie'
+                    ryzen_die_temps = [sensor.current for sensor in temp()["zenpower"] if sensor.label == 'Tdie'
                                        or sensor.label == 'Tctl']
                     output += str(int(max(ryzen_die_temps)))
                 except:
                     pass
-            if "coretemp" in temp.keys():
+            if "coretemp" in temp().keys():
                 # intel
-                output += str(int(temp["coretemp"][0][1]))
+                output += str(int(temp()["coretemp"][0][1]))
             output += "℉" if fahrenheit else "℃"
             output += separator
 
-        if char == "f" and fans is not None and len(fans) > 0:
+        if char == "f" and fans() and len(fans()) > 0:
             if names:
                 output += c_name if c_name else "FAN: "
-            fan0 = next(iter(fans.values()))
+            fan0 = next(iter(fans().values()))
             output += str(fan0[0][1]) + "/m" + separator
 
-        if char == 'm' and memory is not None:
+        if char == 'm' and memory():
             if names:
                 output += c_name if c_name else "MEM: "
-            output += str(round((memory[0] - memory[1]) / 1073741824, 1)) + " GB" + separator
+            output += str(round((memory()[0] - memory()[1]) / 1073741824, 1)) + " GB" + separator
 
-        if char == 'M' and memory is not None:
+        if char == 'M' and memory():
             if names:
                 output += c_name if c_name else "MEM: "
-            output += str(round((memory[3]) / 1073741824, 1)) + "/" + str(
-                round(memory[0] / 1073741824, 1)) + " GB" + separator
+            output += str(round((memory()[3]) / 1073741824, 1)) + "/" + str(
+                round(memory()[0] / 1073741824, 1)) + " GB" + separator
 
-        if char == 'c' and memory is not None:
+        if char == 'c' and memory():
             if names:
                 output += c_name if c_name else "MEM: "
-            output += str(memory[2]) + "%" + separator
+            output += str(memory()[2]) + "%" + separator
 
-        if char == 'C' and memory is not None:
+        if char == 'C' and memory():
             if names:
                 output += c_name if c_name else "MEM: "
-            output += str(100 - memory[2]) + "%" + separator
+            output += str(100 - memory()[2]) + "%" + separator
 
-        if char == 'u' and b_time is not None:
-            up_time = int(time.time()) - b_time
+        if char == 'u' and b_time():
+            up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
             if names:
                 output += c_name if c_name else "UP: "
             output += "%d:%02d" % (h, m) + separator
 
-        if char == 'U' and b_time is not None:
-            up_time = int(time.time()) - b_time
+        if char == 'U' and b_time():
+            up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
             if names:
                 output += c_name if c_name else "UP: "
             output += "%d:%02d:%02d" % (h, m, s) + separator
 
-        if char == "w" and swap is not None:
+        if char == "w" and swap():
             if names:
                 output += c_name if c_name else "SWAP: "
-            output += str(round(swap[1] / 1073741824, 1)) + " GB" + separator
+            output += str(round(swap()[1] / 1073741824, 1)) + " GB" + separator
 
-        if char == "W" and swap is not None:
+        if char == "W" and swap():
             if names:
                 output += c_name if c_name else "SWAP: "
-            output += str(round(swap[1] / 1073741824, 1)) + "/"
-            output += str(round(swap[0] / 1073741824, 1)) + " GB" + separator
+            output += str(round(swap()[1] / 1073741824, 1)) + "/"
+            output += str(round(swap()[0] / 1073741824, 1)) + " GB" + separator
 
-        if char == "x" and swap is not None:
+        if char == "x" and swap():
             if names:
                 output += c_name if c_name else "SWAP: "
-            output += str(swap[3]) + "%" + separator
+            output += str(swap()[3]) + "%" + separator
 
-        if char == "d" or char == "n" and disks_usage is not None:
+        if char == "d" or char == "n" and disks_usage:
             if which is not None:
                 try:
                     entry = disks_usage[which]
@@ -332,7 +277,7 @@ def main():
                     output += entry[0] + ": "
                     output += str(entry[3]) + "%" + separator
 
-        if char == "D" or char == "N" and disks_usage is not None:
+        if char == "D" or char == "N" and disks_usage:
             if c_name:
                 output += c_name
             if which is not None:
@@ -368,6 +313,41 @@ def main():
 
     print(output)
 
+
+@lru_cache
+def pcpu():
+    return psutil.cpu_percent(interval=1, percpu=True)
+
+@lru_cache
+def avg():
+    _avg = str(psutil.cpu_percent(interval=1))
+    if len(_avg) < 4:
+        _avg = " " + _avg
+    return _avg
+
+@lru_cache
+def speed():
+    return psutil.cpu_freq(False)
+
+@lru_cache
+def freqs():
+    return psutil.cpu_freq(True)
+
+@lru_cache
+def fans():
+    return psutil.sensors_fans()
+
+@lru_cache
+def memory():
+    return psutil.virtual_memory()
+
+@lru_cache
+def swap():
+    return psutil.swap_memory()
+
+@lru_cache
+def b_time():
+    return psutil.boot_time()
 
 def per_cpu(result):
     string = ""
