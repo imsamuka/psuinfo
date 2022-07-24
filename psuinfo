@@ -81,8 +81,6 @@ def main():
     if testing:
         time_start = int(round(time.time() * 1000))
 
-    output = ""
-
     @lru_cache
     def temp():
         return psutil.sensors_temperatures(fahrenheit)
@@ -140,8 +138,8 @@ def main():
             pass
 
 
-    # Build output component after component
-    output += separator
+    # Build output after components
+    output = ""
 
     for char in components:
         if char == "g" and pcpu():
@@ -149,40 +147,40 @@ def main():
                 output += c_name
             output += graph_per_cpu(pcpu()) + separator
 
-        if char == "p" and pcpu():
+        elif char == "p" and pcpu():
             if names:
-                output += c_name if c_name else "CPU: "
+                output += c_name or "CPU: "
             output += per_cpu(pcpu()) + separator
 
-        if char == "a" and avg():
+        elif char == "a" and avg():
             if names:
-                output += c_name if c_name else "avCPU: "
+                output += c_name or "avCPU: "
             output += avg() + "%" + separator
 
-        if char == "q" and freqs():
+        elif char == "q" and freqs():
             if names:
-                output += c_name if c_name else "CPU: "
+                output += c_name or "CPU: "
             output += freq_per_cpu(freqs())[0][:-1] + " GHz" + separator
 
-        if char == "Q" and freqs():
+        elif char == "Q" and freqs():
             if names:
-                output += c_name if c_name else "CPU: "
+                output += c_name or "CPU: "
             result = freq_per_cpu(freqs())
             output += result[0][:-1] + "/" + str(result[1]) + " GHz" + separator
 
-        if char == "s" and speed():
+        elif char == "s" and speed():
             if names:
-                output += c_name if c_name else "SPD: "
+                output += c_name or "SPD: "
             output += str(round(speed()[0] / 1000, 1)) + " GHz" + separator
 
-        if char == "S" and speed():
+        elif char == "S" and speed():
             if names:
-                output += c_name if c_name else "avSPD: "
+                output += c_name or "avSPD: "
             output += str(round(speed()[0] / 1000, 1)) + "/" + str(round(speed()[2] / 1000, 1)) + " GHz" + separator
 
-        if char == "t" and temp() and len(temp()) > 0:
+        elif char == "t" and temp():
             if names:
-                output += c_name if c_name else "CORE: "
+                output += c_name or "CORE: "
             if "k10temp" in temp().keys():
                 # ryzen, multiple Die temperatures for threadripper/Epyc
                 try:
@@ -205,66 +203,66 @@ def main():
             output += "℉" if fahrenheit else "℃"
             output += separator
 
-        if char == "f" and fans() and len(fans()) > 0:
+        elif char == "f" and fans():
             if names:
-                output += c_name if c_name else "FAN: "
+                output += c_name or "FAN: "
             fan0 = next(iter(fans().values()))
             output += str(fan0[0][1]) + "/m" + separator
 
-        if char == 'm' and memory():
+        elif char == 'm' and memory():
             if names:
-                output += c_name if c_name else "MEM: "
+                output += c_name or "MEM: "
             output += str(round((memory()[0] - memory()[1]) / 1073741824, 1)) + " GB" + separator
 
-        if char == 'M' and memory():
+        elif char == 'M' and memory():
             if names:
-                output += c_name if c_name else "MEM: "
+                output += c_name or "MEM: "
             output += str(round((memory()[3]) / 1073741824, 1)) + "/" + str(
                 round(memory()[0] / 1073741824, 1)) + " GB" + separator
 
-        if char == 'c' and memory():
+        elif char == 'c' and memory():
             if names:
-                output += c_name if c_name else "MEM: "
+                output += c_name or "MEM: "
             output += str(memory()[2]) + "%" + separator
 
-        if char == 'C' and memory():
+        elif char == 'C' and memory():
             if names:
-                output += c_name if c_name else "MEM: "
+                output += c_name or "MEM: "
             output += str(100 - memory()[2]) + "%" + separator
 
-        if char == 'u' and b_time():
+        elif char == 'u' and b_time():
             up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
             if names:
-                output += c_name if c_name else "UP: "
+                output += c_name or "UP: "
             output += "%d:%02d" % (h, m) + separator
 
-        if char == 'U' and b_time():
+        elif char == 'U' and b_time():
             up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
             if names:
-                output += c_name if c_name else "UP: "
+                output += c_name or "UP: "
             output += "%d:%02d:%02d" % (h, m, s) + separator
 
-        if char == "w" and swap():
+        elif char == "w" and swap():
             if names:
-                output += c_name if c_name else "SWAP: "
+                output += c_name or "SWAP: "
             output += str(round(swap()[1] / 1073741824, 1)) + " GB" + separator
 
-        if char == "W" and swap():
+        elif char == "W" and swap():
             if names:
-                output += c_name if c_name else "SWAP: "
+                output += c_name or "SWAP: "
             output += str(round(swap()[1] / 1073741824, 1)) + "/"
             output += str(round(swap()[0] / 1073741824, 1)) + " GB" + separator
 
-        if char == "x" and swap():
+        elif char == "x" and swap():
             if names:
-                output += c_name if c_name else "SWAP: "
+                output += c_name or "SWAP: "
             output += str(swap()[3]) + "%" + separator
 
-        if char == "d" or char == "n" and disks_usage:
+        elif char == "d" or char == "n" and disks_usage:
             if which is not None:
                 try:
                     entry = disks_usage[which]
@@ -277,7 +275,7 @@ def main():
                     output += entry[0] + ": "
                     output += str(entry[3]) + "%" + separator
 
-        if char == "D" or char == "N" and disks_usage:
+        elif char == "D" or char == "N" and disks_usage:
             if c_name:
                 output += c_name
             if which is not None:
@@ -294,24 +292,19 @@ def main():
                     output += str(round(entry[1] / 1073741824, 1)) + "/"
                     output += str(round(entry[2] / 1073741824, 1)) + " GB" + separator
 
-        if char == "k":
-            if names and xfer_start is not None and xfer_finish is not None:
-                output += c_name if c_name else "Net: "
+        elif char == "k" and xfer_start and xfer_finish:
+            if names:
+                output += c_name or "Net: "
             output += '{:0.2f}'.format((xfer_finish[0] - xfer_start[0]) / 1024) + '  {:0.2f} kB/s'.format(
                 (xfer_finish[1] - xfer_start[1]) / 1024) + separator
 
     if testing:
         output += "[" + str(int((round(time.time() * 1000)) - time_start) / 1000) + "s]" + separator
 
-    # remove leading and trailing separator
-    l = len(separator)
-    if l > 0:
-        output = output[l:-l]
-
     if draw_icons:
         print(path_to_icon)
 
-    print(output)
+    print(output.removesuffix(separator))
 
 
 @lru_cache
