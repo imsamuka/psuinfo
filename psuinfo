@@ -30,7 +30,7 @@ def main():
     home = os.getenv("HOME")
     draw_icons = False
 
-    disks_usage = which = xfer_start = xfer_finish = path_to_icon = c_name = None
+    disks_usage = which = xfer_start = xfer_end = path_to_icon = c_name = None
 
     for arg in sys.argv[1:]:
         if arg in ("-h", "--help"):
@@ -89,9 +89,9 @@ def main():
         try:
             xfer_start = psutil.net_io_counters()
             time.sleep(1)
-            xfer_finish = psutil.net_io_counters()
-            ul = (xfer_finish[0] - xfer_start[0]) / 1024
-            dl = (xfer_finish[1] - xfer_start[1]) / 1024
+            xfer_end = psutil.net_io_counters()
+            ul = (xfer_end[0] - xfer_start[0]) / 1024
+            dl = (xfer_end[1] - xfer_start[1]) / 1024
             # We've not selected an icon previously. Now we have enough data.
             if draw_icons:
                 path_to_icon = net_icon(home, ul, dl)
@@ -137,7 +137,6 @@ def main():
         except:
             pass
 
-
     def nameAs(default):
         return c_name or default if names else ""
 
@@ -146,48 +145,47 @@ def main():
 
     for char in components:
         if char == "g":
-            if not pcpu():
-                continue
-            output.append((c_name or "") + graph_per_cpu(pcpu()))
+            if pcpu():
+                output.append((c_name or "") + graph_per_cpu(pcpu()))
 
         elif char == "p":
-            if not pcpu():
-                continue
-            output.append(nameAs("CPU: ") + per_cpu(pcpu()))
+            if pcpu():
+                output.append(nameAs("CPU: ") + per_cpu(pcpu()))
 
         elif char == "a":
-            if not avg():
-                continue
-            output.append(nameAs("avCPU: ") + avg() + "%")
+            if avg():
+                output.append(nameAs("avCPU: ") + avg() + "%")
 
         elif char == "q":
-            if not freqs():
-                continue
-            output.append(nameAs("CPU: ") + freq_per_cpu(freqs())[0][:-1] + " GHz")
+            if freqs():
+                output.append(
+                    nameAs("CPU: ") +
+                    freq_per_cpu(freqs())[0][:-1] + " GHz"
+                )
 
         elif char == "Q":
-            if not freqs():
-                continue
-            _result = freq_per_cpu(freqs())
-            output.append(
-                nameAs("CPU: ") +
-                _result[0][:-1] + "/" +
-                str(_result[1]) + " GHz"
-            )
+            if freqs():
+                _result = freq_per_cpu(freqs())
+                output.append(
+                    nameAs("CPU: ") +
+                    _result[0][:-1] + "/" +
+                    str(_result[1]) + " GHz"
+                )
 
         elif char == "s":
-            if not speed():
-                continue
-            output.append(nameAs("SPD: ") + str(round(speed()[0] / 1000, 1)) + " GHz")
+            if speed():
+                output.append(
+                    nameAs("SPD: ") +
+                    str(round(speed()[0] / 1000, 1)) + " GHz"
+                )
 
         elif char == "S":
-            if not speed():
-                continue
-            output.append(
-                nameAs("avSPD: ") +
-                str(round(speed()[0] / 1000, 1)) + "/" +
-                str(round(speed()[2] / 1000, 1)) + " GHz"
-            )
+            if speed():
+                output.append(
+                    nameAs("avSPD: ") +
+                    str(round(speed()[0] / 1000, 1)) + "/" +
+                    str(round(speed()[2] / 1000, 1)) + " GHz"
+                )
 
         elif char == "t":
             if not temp():
@@ -216,117 +214,101 @@ def main():
                 output.append(name + temper + ("℉" if fahrenheit else "℃"))
 
         elif char == "f":
-            if not fans():
-                continue
-            fan0 = next(iter(fans().values()))
-            output.append(nameAs("FAN: ") + str(fan0[0][1]) + "/m")
+            if fans():
+                fan0 = next(iter(fans().values()))
+                output.append(nameAs("FAN: ") + str(fan0[0][1]) + "/m")
 
         elif char == 'm':
-            if not memory():
-                continue
-            output.append(
-                nameAs("MEM: ") +
-                str(round((memory()[0] - memory()[1]) / 1073741824, 1)) + " GB"
-            )
+            if memory():
+                output.append(
+                    nameAs("MEM: ") +
+                    str(round((memory()[0] - memory()[1]) / 1073741824, 1)) + " GB"
+                )
 
         elif char == 'M':
-            if not memory():
-                continue
-            output.append(
-                nameAs("MEM: ") +
-                str(round((memory()[3]) / 1073741824, 1)) + "/" +
-                str(round(memory()[0] / 1073741824, 1)) + " GB"
-            )
+            if memory():
+                output.append(
+                    nameAs("MEM: ") +
+                    str(round((memory()[3]) / 1073741824, 1)) + "/" +
+                    str(round(memory()[0] / 1073741824, 1)) + " GB"
+                )
 
         elif char == 'c':
-            if not memory():
-                continue
-            output.append(nameAs("MEM: ") + str(memory()[2]) + "%")
+            if memory():
+                output.append(nameAs("MEM: ") + str(memory()[2]) + "%")
 
         elif char == 'C':
-            if not memory():
-                continue
-            output.append(nameAs("MEM: ") + str(100 - memory()[2]) + "%")
+            if memory():
+                output.append(nameAs("MEM: ") + str(100 - memory()[2]) + "%")
 
         elif char == 'u':
-            if not b_time():
-                continue
-            up_time = int(time.time()) - b_time()
-            m, s = divmod(up_time, 60)
-            h, m = divmod(m, 60)
-            output.append(nameAs("UP: ") + "%d:%02d" % (h, m))
+            if b_time():
+                up_time = int(time.time()) - b_time()
+                m, s = divmod(up_time, 60)
+                h, m = divmod(m, 60)
+                output.append(nameAs("UP: ") + "%d:%02d" % (h, m))
 
         elif char == 'U':
-            if not b_time():
-                continue
-            up_time = int(time.time()) - b_time()
-            m, s = divmod(up_time, 60)
-            h, m = divmod(m, 60)
-            output.append(nameAs("UP: ") + "%d:%02d:%02d" % (h, m, s))
+            if b_time():
+                up_time = int(time.time()) - b_time()
+                m, s = divmod(up_time, 60)
+                h, m = divmod(m, 60)
+                output.append(nameAs("UP: ") + "%d:%02d:%02d" % (h, m, s))
 
         elif char == "w":
-            if not swap():
-                continue
-            output.append(nameAs("SWAP: ") + str(round(swap()[1] / 1073741824, 1)) + " GB")
+            if swap():
+                output.append(
+                    nameAs("SWAP: ") +
+                    str(round(swap()[1] / 1073741824, 1)) + " GB"
+                )
 
         elif char == "W":
-            if not swap():
-                continue
-            output.append(
-                nameAs("SWAP: ") +
-                str(round(swap()[1] / 1073741824, 1)) + "/" +
-                str(round(swap()[0] / 1073741824, 1)) + " GB"
-            )
-
-
+            if swap():
+                output.append(
+                    nameAs("SWAP: ") +
+                    str(round(swap()[1] / 1073741824, 1)) + "/" +
+                    str(round(swap()[0] / 1073741824, 1)) + " GB"
+                )
 
         elif char == "x":
-            if not swap():
-                continue
-            output.append(nameAs("SWAP: ") + str(swap()[3]) + "%")
+            if swap():
+                output.append(nameAs("SWAP: ") + str(swap()[3]) + "%")
 
         elif char == "d" or char == "n":
-            if not disks_usage:
-                continue
-            if which is not None:
-                try:
-                    entry = disks_usage[which]
-                    output.append(entry[0] + ": " + str(entry[3]) + "%")
-                except IndexError:
-                    pass
-            else:
-                for entry in disks_usage:
-                    output.append(entry[0] + ": " + str(entry[3]) + "%")
+            if disks_usage:
+                if which is not None:
+                    entry = disks_usage.get(which)
+                    if entry:
+                        output.append(entry[0] + ": " + str(entry[3]) + "%")
+                else:
+                    for entry in disks_usage:
+                        output.append(entry[0] + ": " + str(entry[3]) + "%")
 
         elif char == "D" or char == "N":
-            if not disks_usage:
-                continue
-            if which is not None:
-                try:
-                    entry = disks_usage[which]
-                    output.append(
-                        entry[0] + ": " +
-                        str(round(entry[1] / 1073741824, 1)) + "/" +
-                        str(round(entry[2] / 1073741824, 1)) + " GB"
-                    )
-                except IndexError:
-                    pass
-            else:
-                for entry in disks_usage:
-                    output.append(
-                        entry[0] + ": " +
-                        str(round(entry[1] / 1073741824, 1)) + "/" +
-                        str(round(entry[2] / 1073741824, 1)) + " GB"
-                    )
+            if disks_usage:
+                if which is not None:
+                    entry = disks_usage.get(which)
+                    if entry:
+                        output.append(
+                            entry[0] + ": " +
+                            str(round(entry[1] / 1073741824, 1)) + "/" +
+                            str(round(entry[2] / 1073741824, 1)) + " GB"
+                        )
+                else:
+                    for entry in disks_usage:
+                        output.append(
+                            entry[0] + ": " +
+                            str(round(entry[1] / 1073741824, 1)) + "/" +
+                            str(round(entry[2] / 1073741824, 1)) + " GB"
+                        )
 
         elif char == "k":
-            if not (xfer_start and xfer_finish):
-                continue
-            output.append(
-                nameAs("Net: ") +
-                '{:0.2f}  '.format((xfer_finish[0] - xfer_start[0]) / 1024) +
-                '{:0.2f} kB/s'.format((xfer_finish[1] - xfer_start[1]) / 1024)
-            )
+            if xfer_start and xfer_end:
+                output.append(
+                    nameAs("Net: ") +
+                    '{:0.2f}  '.format((xfer_end[0] - xfer_start[0]) / 1024) +
+                    '{:0.2f} kB/s'.format((xfer_end[1] - xfer_start[1]) / 1024)
+                )
 
     if testing:
         output.append("[" + str(int((round(time.time() * 1000)) - time_start) / 1000) + "s]")
