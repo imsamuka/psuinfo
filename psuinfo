@@ -142,43 +142,59 @@ def main():
     output = ""
 
     for char in components:
-        if char == "g" and pcpu():
+        if char == "g":
+            if not pcpu():
+                continue
             if c_name:
                 output += c_name
             output += graph_per_cpu(pcpu()) + separator
 
-        elif char == "p" and pcpu():
+        elif char == "p":
+            if not pcpu():
+                continue
             if names:
                 output += c_name or "CPU: "
             output += per_cpu(pcpu()) + separator
 
-        elif char == "a" and avg():
+        elif char == "a":
+            if not avg():
+                continue
             if names:
                 output += c_name or "avCPU: "
             output += avg() + "%" + separator
 
-        elif char == "q" and freqs():
+        elif char == "q":
+            if not freqs():
+                continue
             if names:
                 output += c_name or "CPU: "
             output += freq_per_cpu(freqs())[0][:-1] + " GHz" + separator
 
-        elif char == "Q" and freqs():
+        elif char == "Q":
+            if not freqs():
+                continue
             if names:
                 output += c_name or "CPU: "
             result = freq_per_cpu(freqs())
             output += result[0][:-1] + "/" + str(result[1]) + " GHz" + separator
 
-        elif char == "s" and speed():
+        elif char == "s":
+            if not speed():
+                continue
             if names:
                 output += c_name or "SPD: "
             output += str(round(speed()[0] / 1000, 1)) + " GHz" + separator
 
-        elif char == "S" and speed():
+        elif char == "S":
+            if not speed():
+                continue
             if names:
                 output += c_name or "avSPD: "
             output += str(round(speed()[0] / 1000, 1)) + "/" + str(round(speed()[2] / 1000, 1)) + " GHz" + separator
 
-        elif char == "t" and temp():
+        elif char == "t":
+            if not temp():
+                continue
             if names:
                 output += c_name or "CORE: "
             if "k10temp" in temp().keys():
@@ -203,34 +219,46 @@ def main():
             output += "℉" if fahrenheit else "℃"
             output += separator
 
-        elif char == "f" and fans():
+        elif char == "f":
+            if not fans():
+                continue
             if names:
                 output += c_name or "FAN: "
             fan0 = next(iter(fans().values()))
             output += str(fan0[0][1]) + "/m" + separator
 
-        elif char == 'm' and memory():
+        elif char == 'm':
+            if not memory():
+                continue
             if names:
                 output += c_name or "MEM: "
             output += str(round((memory()[0] - memory()[1]) / 1073741824, 1)) + " GB" + separator
 
-        elif char == 'M' and memory():
+        elif char == 'M':
+            if not memory():
+                continue
             if names:
                 output += c_name or "MEM: "
             output += str(round((memory()[3]) / 1073741824, 1)) + "/" + str(
                 round(memory()[0] / 1073741824, 1)) + " GB" + separator
 
-        elif char == 'c' and memory():
+        elif char == 'c':
+            if not memory():
+                continue
             if names:
                 output += c_name or "MEM: "
             output += str(memory()[2]) + "%" + separator
 
-        elif char == 'C' and memory():
+        elif char == 'C':
+            if not memory():
+                continue
             if names:
                 output += c_name or "MEM: "
             output += str(100 - memory()[2]) + "%" + separator
 
-        elif char == 'u' and b_time():
+        elif char == 'u':
+            if not b_time():
+                continue
             up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
@@ -238,7 +266,9 @@ def main():
                 output += c_name or "UP: "
             output += "%d:%02d" % (h, m) + separator
 
-        elif char == 'U' and b_time():
+        elif char == 'U':
+            if not b_time():
+                continue
             up_time = int(time.time()) - b_time()
             m, s = divmod(up_time, 60)
             h, m = divmod(m, 60)
@@ -246,23 +276,31 @@ def main():
                 output += c_name or "UP: "
             output += "%d:%02d:%02d" % (h, m, s) + separator
 
-        elif char == "w" and swap():
+        elif char == "w":
+            if not swap():
+                continue
             if names:
                 output += c_name or "SWAP: "
             output += str(round(swap()[1] / 1073741824, 1)) + " GB" + separator
 
-        elif char == "W" and swap():
+        elif char == "W":
+            if not swap():
+                continue
             if names:
                 output += c_name or "SWAP: "
             output += str(round(swap()[1] / 1073741824, 1)) + "/"
             output += str(round(swap()[0] / 1073741824, 1)) + " GB" + separator
 
-        elif char == "x" and swap():
+        elif char == "x":
+            if not swap():
+                continue
             if names:
                 output += c_name or "SWAP: "
             output += str(swap()[3]) + "%" + separator
 
-        elif char == "d" or char == "n" and disks_usage:
+        elif char == "d" or char == "n":
+            if not disks_usage:
+                continue
             if which is not None:
                 try:
                     entry = disks_usage[which]
@@ -275,7 +313,9 @@ def main():
                     output += entry[0] + ": "
                     output += str(entry[3]) + "%" + separator
 
-        elif char == "D" or char == "N" and disks_usage:
+        elif char == "D" or char == "N":
+            if not disks_usage:
+                continue
             if c_name:
                 output += c_name
             if which is not None:
@@ -292,7 +332,9 @@ def main():
                     output += str(round(entry[1] / 1073741824, 1)) + "/"
                     output += str(round(entry[2] / 1073741824, 1)) + " GB" + separator
 
-        elif char == "k" and xfer_start and xfer_finish:
+        elif char == "k":
+            if not (xfer_start and xfer_finish):
+                continue
             if names:
                 output += c_name or "Net: "
             output += '{:0.2f}'.format((xfer_finish[0] - xfer_start[0]) / 1024) + '  {:0.2f} kB/s'.format(
