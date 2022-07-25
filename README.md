@@ -73,6 +73,7 @@ psuinfo [-C{components}] | [-I{component}] [-F] [-N] [-S<number>] | [-S<string>]
 
 -F - use Fahrenheit instead of ℃
 -N - display field names (except for (g)raphical CPU load bar)
+-P - (p)ercentage numbers omit decimal points dynamically
 -S<number> - number of spaces between components (-S2 if none given)
 -S<string> for custom separator (use ' | ' to include spaces)
 -M<string> for custom component name ('My custom name: ')
@@ -96,7 +97,7 @@ Custom display, CPU average load, speed and memory w/o max values + names:
 [piotr@asuspro ~]$ psuinfo -Castfm -N
 avCPU: 3.4%  SPD:1.5GHz  CORE:48.0℃  FAN:2500/m   MEM:1.9GB
 
-Custom display with graphical bar, average CPU speed, core temperature, fan speed, 
+Custom display with graphical bar, average CPU speed, core temperature, fan speed,
 memory used/total, drives usage:
 
 [piotr@asuspro ~]$ psuinfo -CgStfMD -N
@@ -107,7 +108,7 @@ You may use a custom separator:
 [piotr@asuspro ~]$ psuinfo -CgStfmxdu -N -S' ┊ '
 __▁_▁___ ┊ avSPD:1.8/3.3GHz ┊ CORE:47.0℃ ┊ FAN:2500/m ┊ MEM:2.0GB ┊ SWAP:0.0% ┊ SDB3:50.6% ┊ SDA1:15.4% ┊ UP:3:06
 
-All available information (use in terminal e.g. to check which data will be available on a certain machine). 
+All available information (use in terminal e.g. to check which data will be available on a certain machine).
 Time of execution on the very end:
 
 [piotr@asuspro ~]$ psuinfo -all
@@ -137,7 +138,7 @@ If you'd like to use (`g` **and**/**or** `p`) **and** `a`, the executor interval
 ```
 piotr@asuspro ~]$ psuinfo -Cga -T -N
 _____▁__  avCPU: 3.0%  [2.139s]
-``` 
+```
 Since data are being collected only once, multiple use of components doesn't change much:
 ```
 ___▁▁▁▁_ avCPU:~4.4% [2.003s]
@@ -159,12 +160,12 @@ execp_has_icon = 0
 execp_cache_icon = 1
 execp_continuous = 1
 execp_markup = 1
-execp_tooltip = 
-execp_lclick_command = 
-execp_rclick_command = 
-execp_mclick_command = 
-execp_uwheel_command = 
-execp_dwheel_command = 
+execp_tooltip =
+execp_lclick_command =
+execp_rclick_command =
+execp_mclick_command =
+execp_uwheel_command =
+execp_dwheel_command =
 execp_font = Monospace 10
 execp_font_color = #aaaaff 100
 execp_padding = 0 0
@@ -194,7 +195,7 @@ Since about 2 releases back the `psutil.sensors_temperatures()` command returns 
 
 > RuntimeWarning: ignoring FileNotFoundError(2, 'No such file or directory') for file '/sys/class/hwmon/hwmon0/temp2_input'
 
-The issue was discussed on the project site, but no action has been taken. It does not stop psuinfo from 
+The issue was discussed on the project site, but no action has been taken. It does not stop psuinfo from
 working well with panels, but looks ugly in terminal output. I tried to supress warnings, by moving the
 script to `/usr/share/psuinfo/psuinfo.py` and adding a shell launcher script:
 
@@ -204,5 +205,5 @@ script to `/usr/share/psuinfo/psuinfo.py` and adding a shell launcher script:
 exec /usr/share/psuinfo/psuinfo.py "$@" 2>/dev/null
 ```
 
-For some reason the script executed this way consumes three times as much CPU power, so I gave up. However, 
+For some reason the script executed this way consumes three times as much CPU power, so I gave up. However,
 you can consider thit for use in terminal.

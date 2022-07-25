@@ -31,6 +31,7 @@ def main():
     path_to_icon = None
     which = None
     c_name = None
+    dyn_percent = False
 
     for arg in sys.argv[1:]:
         if arg in ("-h", "--help"):
@@ -39,6 +40,9 @@ def main():
 
         elif arg == "-F":
             fahrenheit = True
+
+        elif arg == "-P":
+            dyn_percent = True
 
         elif arg == "-N":
             names = True
@@ -95,7 +99,8 @@ def main():
 
         elif char == "a":
             if avg():
-                output.append(nameAs("avCPU: ") + str(avg()).ljust(4) + "%")
+                percent = fformat(avg(), 100, dyn_percent)
+                output.append(nameAs("avCPU: ") + percent + "%")
 
         elif char == "q":
             if freqs():
@@ -190,11 +195,48 @@ def main():
 
         elif char == 'c':
             if memory():
-                output.append(nameAs("MEM: ") + str(memory()[2]) + "%")
+                percent = fformat(memory().percent, 100, dyn_percent)
+                output.append(nameAs("MEM: ") + percent + "%")
 
         elif char == 'C':
             if memory():
-                output.append(nameAs("MEM: ") + str(100 - memory()[2]) + "%")
+                percent = fformat(100 - memory().percent, 100, dyn_percent)
+                output.append(nameAs("MEM: ") + percent + "%")
+
+        elif char == "w":
+            if swap():
+                output.append(
+                    nameAs("SWAP: ") +
+                    str(round(asGB(swap()[1]), 1)) + " GB"
+                )
+
+        elif char == "W":
+            if swap():
+                output.append(
+                    nameAs("SWAP: ") +
+                    str(round(asGB(swap()[1]), 1)) + "/" +
+                    str(round(asGB(swap()[0]), 1)) + " GB"
+                )
+
+        elif char == "x":
+            if swap():
+                percent = fformat(swap().percent, 100, dyn_percent)
+                output.append(nameAs("SWAP: ") + percent + "%")
+
+        elif char == "d" or char == "n":
+            i = 0 if char == "d" else 1
+            for *_names, usage in disk_usage_data(which):
+                percent = fformat(usage.percent, 100, dyn_percent)
+                output.append(_names[i] + ": " + percent + "%")
+
+        elif char == "D" or char == "N":
+            i = 0 if char == "D" else 1
+            for *_names, usage in disk_usage_data(which):
+                output.append(
+                    _names[i] + ": " +
+                    str(round(asGB(usage.used), 1)) + "/" +
+                    str(round(asGB(usage.total), 1)) + " GB"
+                )
 
         elif char == 'u':
             if b_time():
@@ -210,39 +252,6 @@ def main():
                 h, m = divmod(m, 60)
                 output.append(nameAs("UP: ") + "%d:%02d:%02d" % (h, m, s))
 
-        elif char == "w":
-            if swap():
-                output.append(
-                    nameAs("SWAP: ") +
-                    str(round(swap()[1] / 1073741824, 1)) + " GB"
-                )
-
-        elif char == "W":
-            if swap():
-                output.append(
-                    nameAs("SWAP: ") +
-                    str(round(swap()[1] / 1073741824, 1)) + "/" +
-                    str(round(swap()[0] / 1073741824, 1)) + " GB"
-                )
-
-        elif char == "x":
-            if swap():
-                output.append(nameAs("SWAP: ") + str(swap()[3]) + "%")
-
-        elif char == "d" or char == "n":
-            i = 0 if char == "d" else 1
-            for *_names, usage in disk_usage_data(which):
-                output.append(_names[i] + ": " + str(usage.percent) + "%")
-
-        elif char == "D" or char == "N":
-            i = 0 if char == "d" else 1
-            for *_names, usage in disk_usage_data(which):
-                output.append(
-                    _names[i] + ": " +
-                    str(round(usage.used / 1073741824, 1)) + "/" +
-                    str(round(usage.total / 1073741824, 1)) + " GB"
-                )
-
         elif char == "k":
             upload, download = upload_download()
             output.append(
@@ -252,12 +261,14 @@ def main():
             )
 
     if testing:
-        output.append("[" + str(round(time.time()) - round(time_start)) + "s]")
+        output.append("[" + str(round(time.time() - time_start, 5)) + "s]")
 
     if path_to_icon:
         print(path_to_icon)
     print(separator.join(output))
 
+def asGB(value: float):
+    return value / 1024**3
 
 @lru_cache
 def pcpu():
@@ -302,6 +313,7 @@ def disk_usage_data(which: int):
     )
     return tpl[which:which+1] if which is not None else tpl
 
+@lru_cache
 def upload_download():
     xfer_start = psutil.net_io_counters()
     time.sleep(1)
@@ -309,6 +321,12 @@ def upload_download():
     upload = (xfer_end[0] - xfer_start[0]) / 1024
     download = (xfer_end[1] - xfer_start[1]) / 1024
     return upload, download
+
+def fformat(value: float, total: float, dynamic : bool) -> str:
+    """floatFormat: rounds with 1 decimal point if it's deemed relevant"""
+    if dynamic and total > 9 and 0.09 < (value / total) < 0.96:
+        return str(round(value))
+    return str(round(value, 1)) # maintain 1 decimal point
 
 def per_cpu(result):
     string = ""
@@ -372,6 +390,7 @@ def print_help():
 
     print("\n-F - use Fahrenheit instead of ℃")
     print("-N - display field names (except for (g)raphical CPU load bar)")
+    print("-P - (p)ercentage numbers omit decimal points dynamically")
     print("-S<number> - number of spaces between components (-S2 if none given)")
     print("-S<string> for custom separator (use \' | \' to include spaces)")
     print("-M<string> for custom component name (\'My custom name: \')")
