@@ -21,16 +21,16 @@ import psutil
 
 
 def main():
+    time_start = time.time()
     fahrenheit = False
     names = False
     testing = False
-    time_start = None
     components = "gStfM"
     separator = "  "
     home = os.getenv("HOME")
-    draw_icons = False
-
-    which = xfer_start = xfer_end = path_to_icon = c_name = None
+    path_to_icon = None
+    which = None
+    c_name = None
 
     for arg in sys.argv[1:]:
         if arg in ("-h", "--help"):
@@ -60,11 +60,11 @@ def main():
                 which = int(arg[2:])
 
         elif arg.startswith("-I"):
-            draw_icons = True
-            # We can only have one icon per executor, so let's strip components to the first one
+            # We can only have one icon per executor
             components = arg[2]
-            # exception for UL/DL speed; to assign an icon to it we need to calculate speeds first
-            if components != "k":
+            if components == "k":
+                path_to_icon = net_icon(home, *upload_download())
+            else:
                 path_to_icon = icon_path(home, components)
 
         elif arg.startswith("-M"):
@@ -77,22 +77,6 @@ def main():
             components = "gpaQStfMcWDUk"
             names = True
             testing = True
-
-    if testing:
-        time_start = int(round(time.time() * 1000))
-
-    if "k" in components:
-        try:
-            xfer_start = psutil.net_io_counters()
-            time.sleep(1)
-            xfer_end = psutil.net_io_counters()
-            ul = (xfer_end[0] - xfer_start[0]) / 1024
-            dl = (xfer_end[1] - xfer_start[1]) / 1024
-            # We've not selected an icon previously. Now we have enough data.
-            if draw_icons:
-                path_to_icon = net_icon(home, ul, dl)
-        except:
-            pass
 
     def nameAs(default):
         return c_name or default if names else ""
@@ -247,30 +231,30 @@ def main():
 
         elif char == "d" or char == "n":
             i = 0 if char == "d" else 1
-            for *names, usage in disk_usage_data(which):
-                output.append(names[i] + ": " + str(usage.percent) + "%")
+            for *_names, usage in disk_usage_data(which):
+                output.append(_names[i] + ": " + str(usage.percent) + "%")
 
         elif char == "D" or char == "N":
             i = 0 if char == "d" else 1
-            for *names, usage in disk_usage_data(which):
+            for *_names, usage in disk_usage_data(which):
                 output.append(
-                    names[i] + ": " +
+                    _names[i] + ": " +
                     str(round(usage.used / 1073741824, 1)) + "/" +
                     str(round(usage.total / 1073741824, 1)) + " GB"
                 )
 
         elif char == "k":
-            if xfer_start and xfer_end:
-                output.append(
-                    nameAs("Net: ") +
-                    '{:0.2f}  '.format((xfer_end[0] - xfer_start[0]) / 1024) +
-                    '{:0.2f} kB/s'.format((xfer_end[1] - xfer_start[1]) / 1024)
-                )
+            upload, download = upload_download()
+            output.append(
+                nameAs("Net: ") +
+                '{:0.2f}  '.format(upload) +
+                '{:0.2f} kB/s'.format(download)
+            )
 
     if testing:
-        output.append("[" + str(int((round(time.time() * 1000)) - time_start) / 1000) + "s]")
+        output.append("[" + str(round(time.time()) - round(time_start)) + "s]")
 
-    if draw_icons:
+    if path_to_icon:
         print(path_to_icon)
     print(separator.join(output))
 
@@ -317,6 +301,14 @@ def disk_usage_data(which: int):
         ) for partition in psutil.disk_partitions()
     )
     return tpl[which:which+1] if which is not None else tpl
+
+def upload_download():
+    xfer_start = psutil.net_io_counters()
+    time.sleep(1)
+    xfer_end = psutil.net_io_counters()
+    upload = (xfer_end[0] - xfer_start[0]) / 1024
+    download = (xfer_end[1] - xfer_start[1]) / 1024
+    return upload, download
 
 def per_cpu(result):
     string = ""
